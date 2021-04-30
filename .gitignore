@@ -1,0 +1,7 @@
+bazel-*
+*.swp
+CMake*
+Makefile
+cmake*
+*.so
+*.a
