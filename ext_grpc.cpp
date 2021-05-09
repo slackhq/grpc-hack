@@ -18,7 +18,7 @@ namespace HPHP {
     static const StaticString s_cppClassName;                                  \
     static Class *getClass() {                                                 \
       if (s_class == nullptr) {                                                \
-        s_class = Unit::lookupClass(s_hackClassName.get());                    \
+        s_class = Class::lookup(s_hackClassName.get());                        \
         assertx(s_class);                                                      \
       }                                                                        \
       return s_class;                                                          \
