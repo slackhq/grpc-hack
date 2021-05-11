@@ -5,3 +5,4 @@ for F in `ls **/*.php`
 do
   hackfmt -i $F
 done
+buildifier BUILD

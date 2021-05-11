@@ -4,6 +4,7 @@
 
 #include "src/core/lib/json/json.h"
 #include "src/core/lib/surface/channel.h"
+#include "src/cpp/server/channelz/channelz_service.h"
 
 #include "grpc_client.h"
 
@@ -134,8 +135,12 @@ struct ChannelImpl : Channel {
     ret["name"] = name_;
     ret["target"] = target_;
     ret["normalized_args"] = args_->DebugNormalized();
-    ret["channelz"] = grpc_channel_get_channelz_node(core_channel_)->RenderJson();
-    ret["state"] = grpc_core::ConnectivityStateName(channel_->GetState(false /* try to connect */));
+    if (core_channel_ != nullptr) {
+      // Should be true for all but loopback server channels.
+      ret["channelz"] = grpc_channel_get_channelz_node(core_channel_)->RenderJson();
+      // This one logs an error if it's the loopback server.
+      ret["state"] = grpc_core::ConnectivityStateName(channel_->GetState(false /* try to connect */));
+    }
     ret["lb_policy_name"] = channel_->GetLoadBalancingPolicyName();
     ret["service_config_json"] = channel_->GetServiceConfigJSON();
     return ret;
@@ -248,19 +253,31 @@ public:
     // We do a more complicated form of the above so we can get access to the
     // core channel pointer, which in turn can be used with channelz apis.
     grpc_channel_args channel_args;
-    ChannelArgumentsImpl::from(args.get())->args_->SetChannelArgs(&channel_args);
+    auto cargs = ChannelArgumentsImpl::from(args.get());
+    cargs->args_->SetChannelArgs(&channel_args);
 
     auto record = std::make_shared<ChannelImpl>();
     record->args_ = args;
     record->name_ = name;
     record->target_ = target;
+    if (target == "hhvm-loopback") {
+      if (!loopback_server_.get()) {
+        grpc::ServerBuilder builder;
+        builder.RegisterService(new grpc::ChannelzService()); // leaked.
+        builder.AddCompletionQueue();
+        loopback_server_ = builder.BuildAndStart();
+      }
+      record->core_channel_ = nullptr;
+      record->channel_ = loopback_server_->InProcessChannel(*(cargs->args_.get()));
+    } else {
     record->core_channel_ =
         grpc_insecure_channel_create(target.c_str(), &channel_args, nullptr);
     std::vector<
         std::unique_ptr<grpc::experimental::ClientInterceptorFactoryInterface>>
         interceptor_creators;
-    record->channel_ = ::grpc::CreateChannelInternal(
+     record->channel_ = ::grpc::CreateChannelInternal(
         "", record->core_channel_, std::move(interceptor_creators));
+    }
     map_[name] = record;
     return record;
   }
@@ -277,6 +294,7 @@ public:
 private:
   std::mutex mu_;
   std::unordered_map<std::string, std::shared_ptr<ChannelImpl>> map_;
+  std::unique_ptr<grpc::Server> loopback_server_;
 };
 
 ChannelStore *ChannelStore::Singleton = nullptr;

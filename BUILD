@@ -7,8 +7,9 @@ cc_library(
     linkstatic = True,
     deps = [
         "@com_github_grpc_grpc//:grpc++",
-        "@com_github_grpc_grpc//:grpc_base_c", # channelz/json etc.
-     ],
+        "@com_github_grpc_grpc//:grpc_base_c",  # channelz/json etc.
+        "@com_github_grpc_grpc//:grpcpp_channelz",
+    ],
     # linkopts=['-static'],
     # linkshared = True,
 
