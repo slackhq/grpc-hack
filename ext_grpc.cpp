@@ -180,7 +180,7 @@ protected:
   // where we return data to PHP.
   void unserialize(TypedValue &result) override final {
     auto resp = data_->UnserializeResponse();
-    auto resTuple = make_vec_aarray(resp, data_->UnserializeStatus());
+    auto resTuple = make_vec_array(resp, data_->UnserializeStatus());
     tvCopy(make_array_like_tv(resTuple.detach()), result);
   }
 };
