@@ -35,7 +35,7 @@ struct ClientContextImpl: ClientContext {
     return peer_;
   }
 
-  void SetTimeoutMicros(int to) override {
+  void SetTimeoutMicros(int64_t to) override {
     if (to > 0) {
       auto gprto =
           gpr_time_add(gpr_now(GPR_CLOCK_MONOTONIC),

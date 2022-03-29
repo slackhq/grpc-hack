@@ -11,6 +11,9 @@
 
 namespace HPHP {
 
+#define CLAMP_TO_SIGNED_32(v) \
+  (v > INT32_MAX ? INT32_MAX : ((v < INT32_MIN) ? INT32_MIN : v))
+
 #define NATIVE_DATA_CLASS(cls, hackcls, ptr, assign)                           \
   struct cls {                                                                 \
     static Class *s_class;                                                     \
@@ -54,7 +57,7 @@ namespace HPHP {
 // Status
 //
 NATIVE_DATA_CLASS(GrpcStatus, GrpcNative\\Status, Status, data);
-NATIVE_GET_METHOD(int, GrpcStatus, Code, d->data_.code_);
+NATIVE_GET_METHOD(int64_t, GrpcStatus, Code, d->data_.code_);
 NATIVE_GET_METHOD(String, GrpcStatus, Message, d->data_.message_);
 NATIVE_GET_METHOD(String, GrpcStatus, Details, d->data_.details_);
 
@@ -68,7 +71,7 @@ Object HHVM_STATIC_METHOD(GrpcClientContext, Create) {
 }
 NATIVE_GET_METHOD(String, GrpcClientContext, Peer, d->data_->Peer());
 NATIVE_SET_METHOD(GrpcClientContext, SetTimeoutMicros,
-                  d->data_->SetTimeoutMicros(p), int p);
+                  d->data_->SetTimeoutMicros(p), int64_t p);
 static void HHVM_METHOD(GrpcClientContext, TryCancel) {
   auto *d = Native::data<GrpcClientContext>(this_);
   d->data_->TryCancel();
@@ -274,9 +277,9 @@ static Object HHVM_METHOD(GrpcChannel, ServerStreamingCall, const Object &ctx,
 NATIVE_DATA_CLASS(GrpcChannelArguments, GrpcNative\\ChannelArguments,
                   std::shared_ptr<ChannelArguments>, std::move(data));
 NATIVE_SET_METHOD(GrpcChannelArguments, SetMaxReceiveMessageSize,
-                  d->data_->SetMaxReceiveMessageSize(size), int size);
+                  d->data_->SetMaxReceiveMessageSize(CLAMP_TO_SIGNED_32(size)), int64_t size);
 NATIVE_SET_METHOD(GrpcChannelArguments, SetMaxSendMessageSize,
-                  d->data_->SetMaxSendMessageSize(size), int size);
+                  d->data_->SetMaxSendMessageSize(CLAMP_TO_SIGNED_32(size)), int64_t size);
 NATIVE_SET_METHOD(GrpcChannelArguments, SetLoadBalancingPolicyName,
                   d->data_->SetLoadBalancingPolicyName(s.toCppString()),
                   const String &s);
